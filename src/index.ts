@@ -9,12 +9,19 @@ export interface Canonical extends Resource {
     version: string;
 }
 
-export interface CanonicalManager {
+export interface AtomicService {
+    dependencies: string[];
+    capabilities: string[];
+    init(): Promise<void>;
+    destroy(): Promise<void>;
+}
+
+export interface CanonicalManager extends AtomicService {
     resolve(canonical: string): Promise<Canonical>;
     search(query: string): Promise<Canonical[]>;
 }
 
-export interface ResourceRepository {
+export interface ResourceRepository extends AtomicService {
     create(opts: { resourceType: string; resource: Resource; }): Promise<Resource>;
     read(opts: { resourceType: string; id: string; }): Promise<Resource>;
     update(opts: { resourceType: string; id: string; resource: Resource; }): Promise<Resource>;
@@ -33,42 +40,47 @@ export interface ValidationResult {
     errors: string[];
 }
 
-export interface Validator {
+export interface Validator extends AtomicService {
     validate(opts: any): ValidationResult;
     validateResource(opts: any): ValidationResult;
 }
 
-export interface Terminology {
+export interface Terminology extends AtomicService {
     lookup(opts: { code: string; system: string; }): Promise<any>;
     expand(opts: { system: string; }): Promise<any>;
     validateCode(opts: { code: string; system: string; }): Promise<any>;
 }
 
-export interface FHIRPath {
+export interface FHIRPath extends AtomicService {
     evaluate(opts: any): Promise<any>;
     compile(opts: any): Promise<any>;
     analyze(opts: any): Promise<any>;
 }
 
-export interface AuditEvent { }
 
-export interface AuditLog {
-    audit(opts: AuditEvent): Promise<void>;
+export interface Audit extends AtomicService {
+    audit(event: Resource): Promise<void>;
 }
 
-export interface Logger {
+export interface Logger extends AtomicService {
     log(opts: any): Promise<void>;
 }
 
+
 export interface AtomicContext {
-    validator?: Validator;
-    canonicalManager?: CanonicalManager;
-    terminology?: Terminology;
-    resourceRepository?: ResourceRepository;
-    logger?: Logger;
-    fhirpath?: FHIRPath;
+    audit: Audit;
+    logger: Logger;
+    fhirpath: FHIRPath;
+    validator: Validator;
+    canonicals: CanonicalManager;
+    terminology: Terminology;
+    repository: ResourceRepository;
 }
 
-export interface AtomicConfig {
-
+export async function AtomicSystem(config: AtomicContext): Promise<AtomicContext> {
+    // todo - topological sort by dependencies
+    for (const service of Object.values(config)) {
+        await service.init()
+    }
+    return config;
 }
