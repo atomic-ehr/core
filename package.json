@@ -1,8 +1,45 @@
 {
   "name": "@atomic-ehr/core",
   "version": "0.0.1",
-  "module": "src/index.ts",
+  "description": "Core utilities for Atomic EHR",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit",
+    "build": "bun run build:clean && bun run build:types",
+    "build:clean": "rm -rf dist",
+    "build:types": "bunx tsc -p tsconfig.build.json",
+    "prepublishOnly": "bun run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/atomic-ehr/core.git"
+  },
+  "keywords": [
+    "atomic-ehr",
+    "ehr",
+    "healthcare",
+    "typescript"
+  ],
+  "author": "Atomic EHR",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/atomic-ehr/core/issues"
+  },
+  "homepage": "https://github.com/atomic-ehr/core#readme",
   "devDependencies": {
     "@types/bun": "latest"
   },
