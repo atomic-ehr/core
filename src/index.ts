@@ -1,3 +1,5 @@
+import type { SearchQuery } from '@atomic-ehr/fhir-search';
+
 export interface Resource {
     id?: string;
     resourceType?: string;
@@ -12,13 +14,36 @@ export interface Canonical extends Resource {
 export interface AtomicService {
     dependencies: string[];
     capabilities: string[];
-    init(): Promise<void>;
+    init(context?: Partial<AtomicContext>): Promise<void>;
     destroy(): Promise<void>;
+}
+
+export interface SearchParameter {
+  // Required fields
+  url: string;
+  name: string;
+  code: string;
+  base: string[];
+  type: string;
+  expression: string;
+
+  // Optional commonly-used fields
+  version?: string;
+  target?: string[];
+  multipleOr?: boolean;
+  multipleAnd?: boolean;
+  comparator?: Array<'eq' | 'ne' | 'gt' | 'lt' | 'ge' | 'le' | 'sa' | 'eb' | 'ap'>;
+  modifier?: Array<'missing' | 'exact' | 'contains' | 'not' | 'text' |
+                   'in' | 'not-in' | 'below' | 'above' | 'type' | 'identifier' | 'ofType'>;
+
+  // Open for all other FHIR SearchParameter fields
+  [key: string]: any;
 }
 
 export interface CanonicalManager extends AtomicService {
     resolve(canonical: string): Promise<Canonical>;
     search(query: string): Promise<Canonical[]>;
+    getSearchParametersForResource(resourceType: string): Promise<SearchParameter[]>;
 }
 
 export interface ResourceRepository extends AtomicService {
@@ -26,7 +51,7 @@ export interface ResourceRepository extends AtomicService {
     read(opts: { resourceType: string; id: string; }): Promise<Resource>;
     update(opts: { resourceType: string; id: string; resource: Resource; }): Promise<Resource>;
     delete(opts: { resourceType: string; id: string; }): Promise<void>;
-    search(opts: { resourceType: string; query: string; }): Promise<Resource[]>;
+    search(searchQuery: SearchQuery): Promise<Resource[]>;
     patch(opts: { resourceType: string; id: string; resource: Resource; }): Promise<Resource>;
     history(opts: { resourceType: string; id: string; }): Promise<Resource[]>;
     typeHistory(opts: { resourceType: string; }): Promise<Resource[]>;
@@ -66,21 +91,41 @@ export interface Logger extends AtomicService {
     log(opts: any): Promise<void>;
 }
 
+// FHIR OperationDefinition for API routing
+export interface OperationDefinition extends Resource {
+  resourceType: 'OperationDefinition';
+  name: string;
+  code: string;
+  system?: boolean;
+  type?: boolean;
+  instance?: boolean;
+  resource?: string[];
+}
+
+export interface FHIROperation {
+    operationDefinition: OperationDefinition;
+    handler: (request: Request) => Promise<Response>;
+}
+
+export interface APIGateway extends AtomicService {
+    registerOperation(operation: FHIROperation): void;
+}
 
 export interface AtomicContext {
     audit: Audit;
     logger: Logger;
     fhirpath: FHIRPath;
     validator: Validator;
-    canonicals: CanonicalManager;
+    canonicalManager: CanonicalManager;
     terminology: Terminology;
     repository: ResourceRepository;
+    apiGateway: APIGateway;
 }
 
-export async function AtomicSystem(config: AtomicContext): Promise<AtomicContext> {
+export async function AtomicSystem(config: Partial<AtomicContext>): Promise<Partial<AtomicContext>> {
     // todo - topological sort by dependencies
     for (const service of Object.values(config)) {
-        await service.init()
+        await service.init(config);
     }
     return config;
 }
