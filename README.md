@@ -16,13 +16,16 @@ This package provides the foundational interfaces and types for creating a modul
 ### Service Interfaces
 
 All services extend the base `AtomicService` interface which provides:
+
 - `dependencies`: Array of required service dependencies
 - `capabilities`: Array of provided capabilities
 - `init()`: Async initialization method
 - `destroy()`: Async cleanup method
 
 #### ResourceRepository
+
 Handles CRUD operations for FHIR resources:
+
 - `create()`, `read()`, `update()`, `delete()`
 - `search()` with query support
 - `patch()` for partial updates
@@ -30,29 +33,38 @@ Handles CRUD operations for FHIR resources:
 - `resolve()` and `bulkResolve()` for reference resolution
 
 #### CanonicalManager
+
 Manages canonical resources (profiles, value sets, etc.):
+
 - `resolve()`: Resolve canonical URLs
 - `search()`: Search for canonical resources
 
 #### Validator
+
 Resource validation services:
+
 - `validate()`: General validation
 - `validateResource()`: Resource-specific validation
 - Returns `ValidationResult` with boolean `valid` flag and `errors` array
 
 #### Terminology
+
 FHIR terminology services:
+
 - `lookup()`: Look up codes in code systems
 - `expand()`: Expand value sets
 - `validateCode()`: Validate codes against terminologies
 
 #### FHIRPath
+
 FHIRPath expression evaluation:
+
 - `evaluate()`: Evaluate FHIRPath expressions
 - `compile()`: Compile expressions
 - `analyze()`: Analyze expressions
 
 #### Audit & Logger
+
 - `Audit`: Audit trail management with `audit()` method
 - `Logger`: Logging services with `log()` method
 
@@ -129,6 +141,64 @@ const names = await context.fhirpath.evaluate({
 bun add @atomic-ehr/core
 ```
 
+## Type System
+
+@atomic-ehr/core includes a powerful type system that provides:
+
+- **Generic resource schemas**: Define custom resource types for full type safety
+- **Extensible interfaces**: Extend services and context via TypeScript declaration merging
+- **FHIR version agnostic**: Works with R4, R5, or custom resource types
+- **Full autocomplete**: Get IntelliSense for resource types, search parameters, and more
+
+### Quick Example
+
+```typescript
+// Define your schema
+declare module '@atomic-ehr/core' {
+  interface CustomSchema {
+    Patient: {
+      resource: R4.IPatient;
+      searchParams: { name?: string; birthdate?: string };
+    };
+  }
+
+  // Extend services with custom methods
+  interface Validator {
+    validateWithAI(resource: any): Promise<ValidationResult>;
+  }
+
+  // Add custom context properties
+  interface AtomicContext {
+    tenant: { id: string; name: string };
+    user?: { id: string; role: string };
+  }
+}
+
+// Get full type safety!
+const patient = await context.repository.create({
+  resourceType: "Patient", // ✅ Autocomplete!
+  resource: { /* ✅ Typed as R4.IPatient */ }
+});
+
+// Use extended methods
+await context.validator.validateWithAI(patient);
+
+// Access custom properties
+console.log(context.tenant.name);
+```
+
+See [examples/03-extension-pattern.md](./examples/03-extension-pattern.md) for a complete guide.
+
+## Examples
+
+- [01-basic-usage.ts](./examples/01-basic-usage.ts) - Basic usage without extensions
+- [02-typed-fhir-r4.ts](./examples/02-typed-fhir-r4.ts) - Full FHIR R4 example with extensions
+- [03-extension-pattern.md](./examples/03-extension-pattern.md) - Complete extension guide
+
+## Hook System
+
+@atomic-ehr/core includes a powerful hook system for request lifecycle management. See [examples/hooks-demo.ts](./examples/hooks-demo.ts) for a complete example.
+
 ## License
 
-[License information here]
+MIT

@@ -1,0 +1,188 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: 'patch'
+      npm_tag:
+        description: 'NPM dist-tag (latest, beta, alpha, next, canary)'
+        required: true
+        type: choice
+        options:
+          - latest
+          - beta
+          - alpha
+          - next
+          - canary
+        default: 'latest'
+      prerelease:
+        description: 'Mark as pre-release on GitHub?'
+        required: true
+        type: boolean
+        default: false
+
+jobs:
+  release:
+    name: Build, Version, and Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run tests
+        run: bun test
+
+      - name: Run typecheck
+        run: bun run typecheck
+
+      - name: Build package
+        run: bun run build
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          # Get current version
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "📦 Current version: $CURRENT_VERSION"
+
+          # Determine version bump command
+          if [ "${{ inputs.npm_tag }}" != "latest" ] && [ "${{ inputs.version_bump }}" = "patch" ]; then
+            # For non-latest tags, append pre-release identifier
+            npm version prerelease --preid=${{ inputs.npm_tag }} --no-git-tag-version
+          else
+            # For latest or major/minor bumps, use standard versioning
+            npm version ${{ inputs.version_bump }} --no-git-tag-version
+          fi
+
+          # Get new version
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "✨ New version: $NEW_VERSION"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog entry
+        id: changelog
+        run: |
+          echo "## What's Changed in v${{ steps.bump_version.outputs.new_version }}" > release_notes.md
+          echo "" >> release_notes.md
+          echo "**Version bump:** ${{ inputs.version_bump }}" >> release_notes.md
+          echo "**NPM tag:** ${{ inputs.npm_tag }}" >> release_notes.md
+          echo "" >> release_notes.md
+
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            echo "### Commits since $LAST_TAG" >> release_notes.md
+            git log $LAST_TAG..HEAD --pretty=format:"- %s (%h)" >> release_notes.md
+          else
+            echo "### Recent commits" >> release_notes.md
+            git log -10 --pretty=format:"- %s (%h)" >> release_notes.md
+          fi
+
+          echo "" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "### Installation" >> release_notes.md
+          echo "\`\`\`bash" >> release_notes.md
+          if [ "${{ inputs.npm_tag }}" = "latest" ]; then
+            echo "bun add @atomic-ehr/core" >> release_notes.md
+          else
+            echo "bun add @atomic-ehr/core@${{ inputs.npm_tag }}" >> release_notes.md
+          fi
+          echo "# or" >> release_notes.md
+          if [ "${{ inputs.npm_tag }}" = "latest" ]; then
+            echo "npm install @atomic-ehr/core" >> release_notes.md
+          else
+            echo "npm install @atomic-ehr/core@${{ inputs.npm_tag }}" >> release_notes.md
+          fi
+          echo "\`\`\`" >> release_notes.md
+
+      - name: Commit version bump
+        run: |
+          git add package.json
+          git commit -m "chore: release v${{ steps.bump_version.outputs.new_version }} [ci skip]"
+          git tag v${{ steps.bump_version.outputs.new_version }}
+
+      - name: Push changes
+        run: |
+          git push origin main
+          git push origin v${{ steps.bump_version.outputs.new_version }}
+
+      - name: Publish to npm
+        run: |
+          if [ "${{ inputs.npm_tag }}" = "latest" ]; then
+            echo "📦 Publishing to npm as @latest"
+            npm publish --access public
+          else
+            echo "📦 Publishing to npm as @${{ inputs.npm_tag }}"
+            npm publish --access public --tag ${{ inputs.npm_tag }}
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.bump_version.outputs.new_version }}
+          name: Release v${{ steps.bump_version.outputs.new_version }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ inputs.prerelease }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "## 🎉 Release Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** v${{ steps.bump_version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**NPM Tag:** ${{ inputs.npm_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Previous Version:** v${{ steps.bump_version.outputs.current_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Package" >> $GITHUB_STEP_SUMMARY
+          echo "- NPM: https://www.npmjs.com/package/@atomic-ehr/core/v/${{ steps.bump_version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- GitHub: https://github.com/${{ github.repository }}/releases/tag/v${{ steps.bump_version.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 Install" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.npm_tag }}" = "latest" ]; then
+            echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+            echo "bun add @atomic-ehr/core" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+            echo "bun add @atomic-ehr/core@${{ inputs.npm_tag }}" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi

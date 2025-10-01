@@ -1,7 +1,7 @@
-import type { CanonicalManager, FHIRPath, Validator, Terminology, ResourceRepository, Audit, Logger, Resource  } from "../src";
+import type { CanonicalManager, FHIRPathEvaluator, Validator, Terminology, ResourceRepository, Audit, Logger, AuditEvent  } from "../src";
 import { AtomicSystem } from "../src";
 
-function TestFHIRPath(): FHIRPath {
+function TestFHIRPath(): FHIRPathEvaluator {
     return {
         dependencies: [],
         capabilities: [],
@@ -9,10 +9,10 @@ function TestFHIRPath(): FHIRPath {
             return { result: "male" };
         },
         compile: async (opts: any) => {
-            return { result: "male" };
+            return { expression: opts.expression, compiled: {} };
         },
         analyze: async (opts: any) => {
-            return { result: "male" };
+            return { expression: opts.expression, valid: true };
         },
         init: async () => { return; },
         destroy: async () => { return; }
@@ -38,10 +38,10 @@ function TestValidator(): Validator {
     return {
         dependencies: [],
         capabilities: [],
-        validate: async (opts: any) => {
+        validate: (opts: any) => {
             return { valid: true, errors: [] };
         },
-        validateResource: async (opts: any) => {
+        validateResource: (opts: any) => {
             return { valid: true, errors: [] };
         },
         init: async () => { return; },
@@ -49,13 +49,7 @@ function TestValidator(): Validator {
     }
 }
 
-function TestAPI(config: {port: number, routes: Record<string, any>}): API {
-    return {
-        start: async () => {
-            return;
-        }
-    }
-}
+// Removed TestAPI function as API type doesn't exist
 
 function TestTerminology(): Terminology {
     return {
@@ -67,10 +61,10 @@ function TestTerminology(): Terminology {
             return { code: "male", display: "Male" };
         },
         expand: async (opts: any) => {
-            return { code: "male", display: "Male" };
+            return { contains: [{ system: "system", code: "male", display: "Male" }] };
         },
         validateCode: async (opts: any) => {
-            return { code: "male", display: "Male" };
+            return { result: true, display: "Male" };
         },
     }
 }
@@ -103,13 +97,19 @@ function TestRepository(config: {dir: string}): ResourceRepository {
         },
         typeHistory: async (opts: any) => {
             return [{ id: "123" }];
-        },  
+        },
+        resolve: async (reference: string) => {
+            return { id: "123" };
+        },
+        bulkResolve: async (references: string[]) => {
+            return [{ id: "123" }];
+        }
     }
 }
 
 function TestAudit(): Audit {
     return {
-        audit: async (event: Resource) => {
+        audit: async (event: AuditEvent) => {
             return;
         },
         init: async () => { return; },
