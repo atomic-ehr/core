@@ -70,19 +70,33 @@ export interface ErrorContext extends RequestContext {
 
 /**
  * Hook phases - when hooks execute in the request lifecycle
+ * Aligned with Fastify's lifecycle hooks for familiarity
  */
 export type HookPhase =
-  | "onBootstrap" // Server startup
+  // Initialization phases
+  | "onBootstrap" // Server startup (called once)
   | "onConfigResolved" // After configuration is resolved
-  | "onRegister" // Service registration
+  | "onRegister" // Plugin/service registration
+  | "onReady" // All plugins registered, before listening
   | "onRouteRegister" // Route registration
+  | "onListen" // Server started listening
+  // Request lifecycle phases
+  | "onRequest" // Request received (alias for preRequest)
   | "preRequest" // Before request processing
+  | "preParsing" // Before body parsing
   | "preValidation" // Before validation
   | "preHandler" // Before business logic
-  | "preResponse" // Before response
+  | "preSerialization" // Before response serialization
+  | "preResponse" // Before response sent
   | "onResponse" // After successful response
+  | "onSend" // Before response is sent (can modify payload)
+  | "onTimeout" // Request timeout
+  // Error handling
   | "onError" // Error handling
-  | "onShutdown"; // Server shutdown
+  | "onRequestAbort" // Request was aborted
+  // Shutdown phases
+  | "onClose" // Server is closing
+  | "onShutdown"; // Server shutdown complete
 
 /**
  * Issue severity levels for diagnostics

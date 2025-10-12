@@ -615,3 +615,6 @@ export async function AtomicSystem<
 
 // Hook system exports
 export * from "./hooks/index.js";
+
+// Plugin system exports
+export * from "./plugins/index.js";
