@@ -10,22 +10,26 @@
  * @example
  * ```ts
  * declare module '@atomic-ehr/core' {
- *   interface CustomSchema {
- *     Patient: {
- *       resource: R4.IPatient;
- *       searchParams: { name?: string; birthdate?: string };
- *     };
+ *   interface ResourceSchema extends FhirR4ResourceMap {
+ *     AnalyticsEvent: DefineResource<
+ *       {
+ *         resourceType: 'AnalyticsEvent';
+ *         timestamp: string;
+ *         type: string;
+ *       },
+ *       { type?: string; date?: { from?: string; to?: string } }
+ *     >;
  *   }
  * }
  * ```
  */
 export interface ResourceSchema {
-	[resourceType: string]: {
-		resource: any;
-		searchParams?: Record<string, any>;
-		createParams?: any;
-		updateParams?: any;
-	};
+  [resourceType: string]: {
+    resource: any;
+    searchParams?: Record<string, any>;
+    createParams?: any;
+    updateParams?: any;
+  };
 }
 
 /**
@@ -33,10 +37,10 @@ export interface ResourceSchema {
  * Uses generic types when no specific schema is provided
  */
 export interface DefaultSchema extends ResourceSchema {
-	[resourceType: string]: {
-		resource: any;
-		searchParams?: Record<string, any>;
-	};
+  [resourceType: string]: {
+    resource: any;
+    searchParams?: Record<string, any>;
+  };
 }
 
 /**
@@ -48,8 +52,8 @@ export interface DefaultSchema extends ResourceSchema {
  * ```
  */
 export type ResourceTypeOf<Schema extends ResourceSchema> = Extract<
-	keyof Schema,
-	string
+  keyof Schema,
+  string
 >;
 
 /**
@@ -61,8 +65,8 @@ export type ResourceTypeOf<Schema extends ResourceSchema> = Extract<
  * ```
  */
 export type ResourceOf<
-	Schema extends ResourceSchema,
-	T extends ResourceTypeOf<Schema>,
+  Schema extends ResourceSchema,
+  T extends ResourceTypeOf<Schema>,
 > = Schema[T]["resource"];
 
 /**
@@ -74,30 +78,30 @@ export type ResourceOf<
  * ```
  */
 export type SearchParamsOf<
-	Schema extends ResourceSchema,
-	T extends ResourceTypeOf<Schema>,
+  Schema extends ResourceSchema,
+  T extends ResourceTypeOf<Schema>,
 > = Schema[T]["searchParams"] extends Record<string, any>
-	? Schema[T]["searchParams"]
-	: Record<string, any>;
+  ? Schema[T]["searchParams"]
+  : Record<string, any>;
 
 /**
  * Extract create parameters from schema
  * Falls back to resource type if not specified
  */
 export type CreateParamsOf<
-	Schema extends ResourceSchema,
-	T extends ResourceTypeOf<Schema>,
+  Schema extends ResourceSchema,
+  T extends ResourceTypeOf<Schema>,
 > = Schema[T]["createParams"] extends Record<string, any>
-	? Schema[T]["createParams"]
-	: ResourceOf<Schema, T>;
+  ? Schema[T]["createParams"]
+  : ResourceOf<Schema, T>;
 
 /**
  * Extract update parameters from schema
  * Falls back to Partial<resource> if not specified
  */
 export type UpdateParamsOf<
-	Schema extends ResourceSchema,
-	T extends ResourceTypeOf<Schema>,
+  Schema extends ResourceSchema,
+  T extends ResourceTypeOf<Schema>,
 > = Schema[T]["updateParams"] extends Record<string, any>
-	? Schema[T]["updateParams"]
-	: Partial<ResourceOf<Schema, T>>;
+  ? Schema[T]["updateParams"]
+  : Partial<ResourceOf<Schema, T>>;

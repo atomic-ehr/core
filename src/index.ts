@@ -1,10 +1,10 @@
 // Import type system
 import type {
-	ResourceSchema,
-	DefaultSchema,
-	ResourceTypeOf,
-	ResourceOf,
-	SearchParamsOf,
+  DefaultSchema,
+  ResourceOf,
+  ResourceSchema,
+  ResourceTypeOf,
+  SearchParamsOf,
 } from "./types/index.js";
 
 // Export type system for users
@@ -16,17 +16,17 @@ export * from "./types/index.js";
  * Base resource interface (backward compatibility)
  */
 export interface Resource {
-	id?: string;
-	resourceType?: string;
-	resourceDefinition?: string;
+  id?: string;
+  resourceType?: string;
+  resourceDefinition?: string;
 }
 
 /**
  * Canonical resource interface
  */
 export interface Canonical extends Resource {
-	url: string;
-	version: string;
+  url: string;
+  version: string;
 }
 
 // ============= BASE SERVICE INTERFACE =============
@@ -36,10 +36,10 @@ export interface Canonical extends Resource {
  * All services must implement initialization and cleanup
  */
 export interface AtomicService {
-	dependencies: string[];
-	capabilities: string[];
-	init(): Promise<void>;
-	destroy(): Promise<void>;
+  dependencies: string[];
+  capabilities: string[];
+  init(): Promise<void>;
+  destroy(): Promise<void>;
 }
 
 // ============= VALIDATION =============
@@ -48,8 +48,8 @@ export interface AtomicService {
  * Validation result interface
  */
 export interface ValidationResult {
-	valid: boolean;
-	errors: string[];
+  valid: boolean;
+  errors: string[];
 }
 
 /**
@@ -62,32 +62,39 @@ export interface ValidationResult {
  * ```ts
  * // Extend with custom methods via declaration merging:
  * declare module '@atomic-ehr/core' {
- *   interface Validator {
+ *   interface ValidatorExtensions {
  *     validateWithAI(resource: any): Promise<ValidationResult>;
  *   }
  * }
  * ```
  */
-export interface Validator<Schema extends ResourceSchema = DefaultSchema>
-	extends AtomicService {
-	/**
-	 * Validate a resource against a profile
-	 */
-	validate<T extends ResourceTypeOf<Schema>>(opts: {
-		resource: ResourceOf<Schema, T>;
-		profile?: string;
-	}): ValidationResult;
+export type ValidatorExtensions<Schema extends ResourceSchema = DefaultSchema> =
+  {};
 
-	/**
-	 * Validate a resource by type
-	 */
-	validateResource<T extends ResourceTypeOf<Schema>>(opts: {
-		resourceType: T;
-		resource: ResourceOf<Schema, T>;
-	}): ValidationResult;
+export interface ValidatorBase<Schema extends ResourceSchema = DefaultSchema>
+  extends AtomicService {
+  /**
+   * Validate a resource against a profile
+   */
+  validate<T extends ResourceTypeOf<Schema>>(opts: {
+    resource: ResourceOf<Schema, T>;
+    profile?: string;
+  }): ValidationResult;
 
-	// Users can extend via declaration merging
+  /**
+   * Validate a resource by type
+   */
+  validateResource<T extends ResourceTypeOf<Schema>>(opts: {
+    resourceType: T;
+    resource: ResourceOf<Schema, T>;
+  }): ValidationResult;
+
+  // Users can extend via declaration merging
 }
+
+export interface Validator<Schema extends ResourceSchema = DefaultSchema>
+  extends ValidatorBase<Schema>,
+    ValidatorExtensions<Schema> {}
 
 // ============= TERMINOLOGY =============
 
@@ -95,29 +102,29 @@ export interface Validator<Schema extends ResourceSchema = DefaultSchema>
  * Code system concept
  */
 export interface CodeSystemConcept {
-	code: string;
-	display: string;
-	definition?: string;
+  code: string;
+  display: string;
+  definition?: string;
 }
 
 /**
  * Value set expansion
  */
 export interface ValueSetExpansion {
-	contains: Array<{
-		system: string;
-		code: string;
-		display?: string;
-	}>;
+  contains: Array<{
+    system: string;
+    code: string;
+    display?: string;
+  }>;
 }
 
 /**
  * Code validation result
  */
 export interface CodeValidationResult {
-	result: boolean;
-	message?: string;
-	display?: string;
+  result: boolean;
+  message?: string;
+  display?: string;
 }
 
 /**
@@ -130,40 +137,48 @@ export interface CodeValidationResult {
  * ```ts
  * // Extend with custom methods:
  * declare module '@atomic-ehr/core' {
- *   interface Terminology {
+ *   interface TerminologyExtensions {
  *     lookupSNOMED(code: string): Promise<SNOMEDConcept>;
  *     translateCode(opts: TranslateOpts): Promise<Translation>;
  *   }
  * }
  * ```
  */
-export interface Terminology<Schema extends ResourceSchema = DefaultSchema>
-	extends AtomicService {
-	/**
-	 * Look up a code in a code system
-	 */
-	lookup(opts: {
-		code: string;
-		system: string;
-		version?: string;
-	}): Promise<CodeSystemConcept>;
+export type TerminologyExtensions<
+  Schema extends ResourceSchema = DefaultSchema,
+> = {};
 
-	/**
-	 * Expand a value set
-	 */
-	expand(opts: { url: string; filter?: string }): Promise<ValueSetExpansion>;
+export interface TerminologyBase<Schema extends ResourceSchema = DefaultSchema>
+  extends AtomicService {
+  /**
+   * Look up a code in a code system
+   */
+  lookup(opts: {
+    code: string;
+    system: string;
+    version?: string;
+  }): Promise<CodeSystemConcept>;
 
-	/**
-	 * Validate a code against a value set
-	 */
-	validateCode(opts: {
-		code: string;
-		system: string;
-		valueSet?: string;
-	}): Promise<CodeValidationResult>;
+  /**
+   * Expand a value set
+   */
+  expand(opts: { url: string; filter?: string }): Promise<ValueSetExpansion>;
 
-	// Users can extend via declaration merging
+  /**
+   * Validate a code against a value set
+   */
+  validateCode(opts: {
+    code: string;
+    system: string;
+    valueSet?: string;
+  }): Promise<CodeValidationResult>;
+
+  // Users can extend via declaration merging
 }
+
+export interface Terminology<Schema extends ResourceSchema = DefaultSchema>
+  extends TerminologyBase<Schema>,
+    TerminologyExtensions<Schema> {}
 
 // ============= FHIRPATH =============
 
@@ -171,18 +186,18 @@ export interface Terminology<Schema extends ResourceSchema = DefaultSchema>
  * Compiled FHIRPath expression
  */
 export interface CompiledExpression {
-	expression: string;
-	compiled: any;
+  expression: string;
+  compiled: any;
 }
 
 /**
  * FHIRPath expression analysis result
  */
 export interface ExpressionAnalysis {
-	expression: string;
-	valid: boolean;
-	returnType?: string;
-	errors?: string[];
+  expression: string;
+  valid: boolean;
+  returnType?: string;
+  errors?: string[];
 }
 
 /**
@@ -195,35 +210,45 @@ export interface ExpressionAnalysis {
  * ```ts
  * // Extend with custom methods:
  * declare module '@atomic-ehr/core' {
- *   interface FHIRPathEvaluator {
+ *   interface FHIRPathEvaluatorExtensions {
  *     evaluateWithCache(expr: string, input: any): Promise<any>;
  *   }
  * }
  * ```
  */
-export interface FHIRPathEvaluator<Schema extends ResourceSchema = DefaultSchema>
-	extends AtomicService {
-	/**
-	 * Evaluate a FHIRPath expression
-	 */
-	evaluate<T extends ResourceTypeOf<Schema>>(opts: {
-		expression: string;
-		input: ResourceOf<Schema, T>;
-		context?: Record<string, any>;
-	}): Promise<any>;
+export type FHIRPathEvaluatorExtensions<
+  Schema extends ResourceSchema = DefaultSchema,
+> = {};
 
-	/**
-	 * Compile a FHIRPath expression
-	 */
-	compile(opts: { expression: string }): Promise<CompiledExpression>;
+export interface FHIRPathEvaluatorBase<
+  Schema extends ResourceSchema = DefaultSchema,
+> extends AtomicService {
+  /**
+   * Evaluate a FHIRPath expression
+   */
+  evaluate<T extends ResourceTypeOf<Schema>>(opts: {
+    expression: string;
+    input: ResourceOf<Schema, T>;
+    context?: Record<string, any>;
+  }): Promise<any>;
 
-	/**
-	 * Analyze a FHIRPath expression
-	 */
-	analyze(opts: { expression: string }): Promise<ExpressionAnalysis>;
+  /**
+   * Compile a FHIRPath expression
+   */
+  compile(opts: { expression: string }): Promise<CompiledExpression>;
 
-	// Users can extend via declaration merging
+  /**
+   * Analyze a FHIRPath expression
+   */
+  analyze(opts: { expression: string }): Promise<ExpressionAnalysis>;
+
+  // Users can extend via declaration merging
 }
+
+export interface FHIRPathEvaluator<
+  Schema extends ResourceSchema = DefaultSchema,
+> extends FHIRPathEvaluatorBase<Schema>,
+    FHIRPathEvaluatorExtensions<Schema> {}
 
 // ============= CANONICAL MANAGER =============
 
@@ -237,26 +262,35 @@ export interface FHIRPathEvaluator<Schema extends ResourceSchema = DefaultSchema
  * ```ts
  * // Extend with custom methods:
  * declare module '@atomic-ehr/core' {
- *   interface CanonicalManager {
+ *   interface CanonicalManagerExtensions {
  *     resolveWithCache(url: string): Promise<Canonical>;
  *   }
  * }
  * ```
  */
-export interface CanonicalManager<Schema extends ResourceSchema = DefaultSchema>
-	extends AtomicService {
-	/**
-	 * Resolve a canonical URL to a resource
-	 */
-	resolve(canonical: string): Promise<Canonical>;
+export type CanonicalManagerExtensions<
+  Schema extends ResourceSchema = DefaultSchema,
+> = {};
 
-	/**
-	 * Search for canonical resources
-	 */
-	search(query: string): Promise<Canonical[]>;
+export interface CanonicalManagerBase<
+  Schema extends ResourceSchema = DefaultSchema,
+> extends AtomicService {
+  /**
+   * Resolve a canonical URL to a resource
+   */
+  resolve(canonical: string): Promise<Canonical>;
 
-	// Users can extend via declaration merging
+  /**
+   * Search for canonical resources
+   */
+  search(query: string): Promise<Canonical[]>;
+
+  // Users can extend via declaration merging
 }
+
+export interface CanonicalManager<Schema extends ResourceSchema = DefaultSchema>
+  extends CanonicalManagerBase<Schema>,
+    CanonicalManagerExtensions<Schema> {}
 
 // ============= REPOSITORY =============
 
@@ -270,97 +304,106 @@ export interface CanonicalManager<Schema extends ResourceSchema = DefaultSchema>
  * ```ts
  * // Extend with custom methods:
  * declare module '@atomic-ehr/core' {
- *   interface ResourceRepository {
+ *   interface ResourceRepositoryExtensions {
  *     bulkImport<T>(resources: T[]): Promise<BulkResult>;
  *     export<T>(opts: ExportOpts): AsyncIterable<T>;
  *   }
  * }
  * ```
  */
-export interface ResourceRepository<
-	Schema extends ResourceSchema = DefaultSchema,
+export type ResourceRepositoryExtensions<
+  Schema extends ResourceSchema = DefaultSchema,
+> = {};
+
+export interface ResourceRepositoryBase<
+  Schema extends ResourceSchema = DefaultSchema,
 > extends AtomicService {
-	/**
-	 * Create a new resource
-	 */
-	create<T extends ResourceTypeOf<Schema>>(opts: {
-		resourceType: T;
-		resource: ResourceOf<Schema, T>;
-	}): Promise<ResourceOf<Schema, T>>;
+  /**
+   * Create a new resource
+   */
+  create<T extends ResourceTypeOf<Schema>>(opts: {
+    resourceType: T;
+    resource: ResourceOf<Schema, T>;
+  }): Promise<ResourceOf<Schema, T>>;
 
-	/**
-	 * Read a resource by ID
-	 */
-	read<T extends ResourceTypeOf<Schema>>(opts: {
-		resourceType: T;
-		id: string;
-	}): Promise<ResourceOf<Schema, T>>;
+  /**
+   * Read a resource by ID
+   */
+  read<T extends ResourceTypeOf<Schema>>(opts: {
+    resourceType: T;
+    id: string;
+  }): Promise<ResourceOf<Schema, T>>;
 
-	/**
-	 * Update a resource
-	 */
-	update<T extends ResourceTypeOf<Schema>>(opts: {
-		resourceType: T;
-		id: string;
-		resource: ResourceOf<Schema, T>;
-	}): Promise<ResourceOf<Schema, T>>;
+  /**
+   * Update a resource
+   */
+  update<T extends ResourceTypeOf<Schema>>(opts: {
+    resourceType: T;
+    id: string;
+    resource: ResourceOf<Schema, T>;
+  }): Promise<ResourceOf<Schema, T>>;
 
-	/**
-	 * Delete a resource
-	 */
-	delete<T extends ResourceTypeOf<Schema>>(opts: {
-		resourceType: T;
-		id: string;
-	}): Promise<void>;
+  /**
+   * Delete a resource
+   */
+  delete<T extends ResourceTypeOf<Schema>>(opts: {
+    resourceType: T;
+    id: string;
+  }): Promise<void>;
 
-	/**
-	 * Search for resources
-	 */
-	search<T extends ResourceTypeOf<Schema>>(opts: {
-		resourceType: T;
-		query: SearchParamsOf<Schema, T>;
-	}): Promise<Array<ResourceOf<Schema, T>>>;
+  /**
+   * Search for resources
+   */
+  search<T extends ResourceTypeOf<Schema>>(opts: {
+    resourceType: T;
+    query: SearchParamsOf<Schema, T>;
+  }): Promise<Array<ResourceOf<Schema, T>>>;
 
-	/**
-	 * Patch a resource (partial update)
-	 */
-	patch<T extends ResourceTypeOf<Schema>>(opts: {
-		resourceType: T;
-		id: string;
-		patch: Partial<ResourceOf<Schema, T>>;
-	}): Promise<ResourceOf<Schema, T>>;
+  /**
+   * Patch a resource (partial update)
+   */
+  patch<T extends ResourceTypeOf<Schema>>(opts: {
+    resourceType: T;
+    id: string;
+    patch: Partial<ResourceOf<Schema, T>>;
+  }): Promise<ResourceOf<Schema, T>>;
 
-	/**
-	 * Get resource history
-	 */
-	history<T extends ResourceTypeOf<Schema>>(opts: {
-		resourceType: T;
-		id: string;
-	}): Promise<Array<ResourceOf<Schema, T>>>;
+  /**
+   * Get resource history
+   */
+  history<T extends ResourceTypeOf<Schema>>(opts: {
+    resourceType: T;
+    id: string;
+  }): Promise<Array<ResourceOf<Schema, T>>>;
 
-	/**
-	 * Get type-level history
-	 */
-	typeHistory<T extends ResourceTypeOf<Schema>>(opts: {
-		resourceType: T;
-	}): Promise<Array<ResourceOf<Schema, T>>>;
+  /**
+   * Get type-level history
+   */
+  typeHistory<T extends ResourceTypeOf<Schema>>(opts: {
+    resourceType: T;
+  }): Promise<Array<ResourceOf<Schema, T>>>;
 
-	/**
-	 * Resolve a reference to a resource
-	 */
-	resolve<T extends ResourceTypeOf<Schema>>(
-		reference: string,
-	): Promise<ResourceOf<Schema, T>>;
+  /**
+   * Resolve a reference to a resource
+   */
+  resolve<T extends ResourceTypeOf<Schema>>(
+    reference: string,
+  ): Promise<ResourceOf<Schema, T>>;
 
-	/**
-	 * Bulk resolve references
-	 */
-	bulkResolve<T extends ResourceTypeOf<Schema>>(
-		references: string[],
-	): Promise<Array<ResourceOf<Schema, T>>>;
+  /**
+   * Bulk resolve references
+   */
+  bulkResolve<T extends ResourceTypeOf<Schema>>(
+    references: string[],
+  ): Promise<Array<ResourceOf<Schema, T>>>;
 
-	// Users can extend via declaration merging
+  // Users can extend via declaration merging
 }
+
+export interface ResourceRepository<
+  Schema extends ResourceSchema = DefaultSchema,
+> extends ResourceRepositoryBase<Schema>,
+    ResourceRepositoryExtensions<Schema> {}
 
 // ============= AUDIT =============
 
@@ -368,11 +411,11 @@ export interface ResourceRepository<
  * Audit event interface
  */
 export interface AuditEvent {
-	action: string;
-	resource?: any;
-	timestamp: number;
-	user?: string;
-	[key: string]: any;
+  action: string;
+  resource?: any;
+  timestamp: number;
+  user?: string;
+  [key: string]: any;
 }
 
 /**
@@ -385,21 +428,27 @@ export interface AuditEvent {
  * ```ts
  * // Extend with custom methods:
  * declare module '@atomic-ehr/core' {
- *   interface Audit {
+ *   interface AuditExtensions {
  *     auditBatch(events: AuditEvent[]): Promise<void>;
  *   }
  * }
  * ```
  */
-export interface Audit<Schema extends ResourceSchema = DefaultSchema>
-	extends AtomicService {
-	/**
-	 * Log an audit event
-	 */
-	audit(event: AuditEvent): Promise<void>;
+export type AuditExtensions<Schema extends ResourceSchema = DefaultSchema> = {};
 
-	// Users can extend via declaration merging
+export interface AuditBase<Schema extends ResourceSchema = DefaultSchema>
+  extends AtomicService {
+  /**
+   * Log an audit event
+   */
+  audit(event: AuditEvent): Promise<void>;
+
+  // Users can extend via declaration merging
 }
+
+export interface Audit<Schema extends ResourceSchema = DefaultSchema>
+  extends AuditBase<Schema>,
+    AuditExtensions<Schema> {}
 
 // ============= LOGGER =============
 
@@ -407,10 +456,10 @@ export interface Audit<Schema extends ResourceSchema = DefaultSchema>
  * Log entry interface
  */
 export interface LogEntry {
-	level: "debug" | "info" | "warn" | "error";
-	message: string;
-	data?: any;
-	timestamp?: number;
+  level: "debug" | "info" | "warn" | "error";
+  message: string;
+  data?: any;
+  timestamp?: number;
 }
 
 /**
@@ -421,20 +470,64 @@ export interface LogEntry {
  * ```ts
  * // Extend with custom methods:
  * declare module '@atomic-ehr/core' {
- *   interface Logger {
+ *   interface LoggerExtensions {
  *     logStructured(data: object): Promise<void>;
  *   }
  * }
  * ```
  */
-export interface Logger extends AtomicService {
-	/**
-	 * Log a message
-	 */
-	log(opts: LogEntry): Promise<void>;
+export type LoggerExtensions = {};
 
-	// Users can extend via declaration merging
+export interface LoggerBase extends AtomicService {
+  /**
+   * Log a message
+   */
+  log(opts: LogEntry): Promise<void>;
+
+  // Users can extend via declaration merging
 }
+
+export interface Logger extends LoggerBase, LoggerExtensions {}
+
+// ============= ATOMIC SERVICES REGISTRY =============
+
+/**
+ * Base services map available in the Atomic context
+ */
+export interface AtomicServicesBase<
+  Schema extends ResourceSchema = DefaultSchema,
+> {
+  audit: Audit<Schema>;
+  logger: Logger;
+  fhirpath: FHIRPathEvaluator<Schema>;
+  validator: Validator<Schema>;
+  canonicals: CanonicalManager<Schema>;
+  terminology: Terminology<Schema>;
+  repository: ResourceRepository<Schema>;
+}
+
+/**
+ * Extension point for adding custom services via declaration merging
+ *
+ * @example
+ * ```ts
+ * declare module '@atomic-ehr/core' {
+ *   interface AtomicServicesExtensions<MySchema> {
+ *     analytics: AnalyticsService;
+ *   }
+ * }
+ * ```
+ */
+export type AtomicServicesExtensions<
+  Schema extends ResourceSchema = DefaultSchema,
+> = {};
+
+/**
+ * Combined services interface exposed by Atomic context
+ */
+export interface AtomicServices<Schema extends ResourceSchema = DefaultSchema>
+  extends AtomicServicesBase<Schema>,
+    AtomicServicesExtensions<Schema> {}
 
 // ============= ATOMIC CONTEXT =============
 
@@ -448,7 +541,7 @@ export interface Logger extends AtomicService {
  * ```ts
  * // Extend with custom properties:
  * declare module '@atomic-ehr/core' {
- *   interface AtomicContext {
+ *   interface AtomicContextExtensions<MySchema> {
  *     tenant: { id: string; name: string };
  *     user?: User;
  *     requestId: string;
@@ -456,16 +549,36 @@ export interface Logger extends AtomicService {
  * }
  * ```
  */
-export interface AtomicContext<Schema extends ResourceSchema = DefaultSchema> {
-	audit: Audit<Schema>;
-	logger: Logger;
-	fhirpath: FHIRPathEvaluator<Schema>;
-	validator: Validator<Schema>;
-	canonicals: CanonicalManager<Schema>;
-	terminology: Terminology<Schema>;
-	repository: ResourceRepository<Schema>;
+export type AtomicContextExtensions<
+  Schema extends ResourceSchema = DefaultSchema,
+> = {};
 
-	// Users can extend via declaration merging
+export interface AtomicContextBase<
+  Schema extends ResourceSchema = DefaultSchema,
+> extends AtomicServices<Schema> {}
+
+export interface AtomicContext<Schema extends ResourceSchema = DefaultSchema>
+  extends AtomicContextBase<Schema>,
+    AtomicContextExtensions<Schema> {}
+
+// ============= PLUGIN HELPERS =============
+
+/**
+ * Atomic plugin signature
+ */
+export type AtomicPlugin<
+  Schema extends ResourceSchema = DefaultSchema,
+  Result extends AtomicContext<Schema> = AtomicContext<Schema>,
+> = (context: AtomicContext<Schema>) => Result | Promise<Result>;
+
+/**
+ * Helper to create typed Atomic plugins
+ */
+export function createAtomicPlugin<
+  Schema extends ResourceSchema = DefaultSchema,
+  Result extends AtomicContext<Schema> = AtomicContext<Schema>,
+>(plugin: AtomicPlugin<Schema, Result>): AtomicPlugin<Schema, Result> {
+  return plugin;
 }
 
 // ============= ATOMIC SYSTEM FACTORY =============
@@ -489,15 +602,15 @@ export interface AtomicContext<Schema extends ResourceSchema = DefaultSchema> {
  * ```
  */
 export async function AtomicSystem<
-	Schema extends ResourceSchema = DefaultSchema,
+  Schema extends ResourceSchema = DefaultSchema,
 >(config: AtomicContext<Schema>): Promise<AtomicContext<Schema>> {
-	// TODO: Implement topological sort by dependencies
-	for (const service of Object.values(config)) {
-		if (service && typeof service === "object" && "init" in service) {
-			await (service as AtomicService).init();
-		}
-	}
-	return config;
+  // TODO: Implement topological sort by dependencies
+  for (const service of Object.values(config)) {
+    if (service && typeof service === "object" && "init" in service) {
+      await (service as AtomicService).init();
+    }
+  }
+  return config;
 }
 
 // Hook system exports

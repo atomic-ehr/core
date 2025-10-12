@@ -6,110 +6,112 @@
  * and TypeScript will automatically pick it up
  */
 
-import type { ValidationResult } from "../../src/index.js";
+import type {
+  DefineResource,
+  FhirR4ResourceMap,
+  ValidationResult,
+} from "@atomic-ehr/core";
 
 declare module "@atomic-ehr/core" {
-	// ===== DEFINE RESOURCE SCHEMA =====
-	interface CustomSchema {
-		Patient: {
-			resource: {
-				resourceType: "Patient";
-				id?: string;
-				name?: Array<{
-					family?: string;
-					given?: string[];
-				}>;
-				gender?: "male" | "female" | "other" | "unknown";
-				birthDate?: string;
-				telecom?: Array<{
-					system?: string;
-					value?: string;
-				}>;
-			};
-			searchParams: {
-				name?: string;
-				family?: string;
-				given?: string;
-				birthdate?: string;
-				gender?: "male" | "female" | "other" | "unknown";
-				_id?: string;
-			};
-		};
+  // ===== DEFINE RESOURCE SCHEMA =====
+  interface ResourceSchema extends FhirR4ResourceMap {
+    Patient: DefineResource<
+      {
+        resourceType: "Patient";
+        id?: string;
+        name?: Array<{
+          family?: string;
+          given?: string[];
+        }>;
+        gender?: "male" | "female" | "other" | "unknown";
+        birthDate?: string;
+        telecom?: Array<{
+          system?: string;
+          value?: string;
+        }>;
+      },
+      {
+        name?: string;
+        family?: string;
+        given?: string;
+        birthdate?: string;
+        gender?: "male" | "female" | "other" | "unknown";
+        _id?: string;
+      }
+    >;
 
-		Observation: {
-			resource: {
-				resourceType: "Observation";
-				id?: string;
-				status: "registered" | "preliminary" | "final" | "amended";
-				code: {
-					coding?: Array<{
-						system?: string;
-						code?: string;
-						display?: string;
-					}>;
-				};
-				subject?: {
-					reference?: string;
-				};
-			};
-			searchParams: {
-				patient?: string;
-				code?: string;
-				date?: string;
-			};
-		};
-	}
+    Observation: DefineResource<
+      {
+        resourceType: "Observation";
+        id?: string;
+        status: "registered" | "preliminary" | "final" | "amended";
+        code: {
+          coding?: Array<{
+            system?: string;
+            code?: string;
+            display?: string;
+          }>;
+        };
+        subject?: {
+          reference?: string;
+        };
+      },
+      {
+        patient?: string;
+        code?: string;
+        date?: string;
+      }
+    >;
+  }
 
-	// ===== EXTEND VALIDATOR =====
-	interface Validator {
-		validateWithAI(resource: any): Promise<ValidationResult>;
-		validateBusinessRules(
-			resource: any,
-			rules: string[],
-		): Promise<ValidationResult>;
-	}
+  // ===== EXTEND VALIDATOR =====
+  interface ValidatorExtensions {
+    validateWithAI(resource: any): Promise<ValidationResult>;
+    validateBusinessRules(
+      resource: any,
+      rules: string[],
+    ): Promise<ValidationResult>;
+  }
 
-	// ===== EXTEND TERMINOLOGY =====
-	interface Terminology {
-		lookupSNOMED(code: string): Promise<{
-			code: string;
-			display: string;
-			fsn: string;
-		}>;
+  // ===== EXTEND TERMINOLOGY =====
+  interface TerminologyExtensions {
+    lookupSNOMED(code: string): Promise<{
+      code: string;
+      display: string;
+      fsn: string;
+    }>;
 
-		translateCode(opts: {
-			code: string;
-			sourceSystem: string;
-			targetSystem: string;
-		}): Promise<{
-			sourceCode: string;
-			targetCode: string;
-			equivalence: string;
-		}>;
-	}
+    translateCode(opts: {
+      code: string;
+      sourceSystem: string;
+      targetSystem: string;
+    }): Promise<{
+      sourceCode: string;
+      targetCode: string;
+      equivalence: string;
+    }>;
+  }
 
-	// ===== EXTEND REPOSITORY =====
-	interface ResourceRepository {
-		bulkImport<T>(
-			resources: T[],
-		): Promise<{
-			total: number;
-			succeeded: number;
-			failed: number;
-		}>;
-	}
+  // ===== EXTEND REPOSITORY =====
+  interface ResourceRepositoryExtensions {
+    bulkImport<T>(resources: T[]): Promise<{
+      total: number;
+      succeeded: number;
+      failed: number;
+    }>;
+  }
 
-	// ===== EXTEND CONTEXT =====
-	interface AtomicContext {
-		tenant: {
-			id: string;
-			name: string;
-		};
-		requestId: string;
-		user?: {
-			id: string;
-			role: string;
-			permissions: string[];
-		};
-	}
+  // ===== EXTEND CONTEXT =====
+  interface AtomicContextExtensions {
+    tenant: {
+      id: string;
+      name: string;
+    };
+    requestId: string;
+    user?: {
+      id: string;
+      role: string;
+      permissions: string[];
+    };
+  }
 }

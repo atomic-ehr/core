@@ -6,60 +6,72 @@ This guide shows how to extend @atomic-ehr/core services using Fastify-style dec
 
 @atomic-ehr/core provides a flexible type system that allows you to:
 - Define custom resource schemas
+- Start from the built-in FHIR R4 preset and extend only what you need
 - Add custom methods to services
 - Add custom properties to context
 - Get full TypeScript autocomplete
 
 ## Step 1: Create Type Definitions
 
-Create a `types/atomic.d.ts` file in your project:
+Create a `types/atomic.d.ts` file in your project. Start by extending the
+shipped `FhirR4ResourceMap`, then layer any custom resources or overrides you
+need:
 
 ```typescript
 // types/atomic.d.ts
-import type { ValidationResult } from '@atomic-ehr/core';
+import type {
+  AtomicService,
+  DefineResource,
+  ValidationResult,
+  FhirR4ResourceMap,
+  FhirR4Schema
+} from '@atomic-ehr/core';
 
 declare module '@atomic-ehr/core' {
-  // Define your resource schema
-  interface CustomSchema {
-    Patient: {
-      resource: {
-        resourceType: 'Patient';
+  // Start from the built-in FHIR R4 resources and add a custom domain object
+  interface ResourceSchema extends FhirR4ResourceMap {
+    AnalyticsEvent: DefineResource<
+      {
+        resourceType: 'AnalyticsEvent';
         id?: string;
-        name?: Array<{
-          family?: string;
-          given?: string[];
-        }>;
-        gender?: 'male' | 'female' | 'other' | 'unknown';
-        birthDate?: string;
-      };
-      searchParams: {
-        name?: string;
-        birthdate?: string;
-        gender?: 'male' | 'female' | 'other' | 'unknown';
-      };
-    };
+        timestamp: string;
+        type: string;
+        actor?: string;
+        context?: Record<string, unknown>;
+      },
+      {
+        type?: string;
+        actor?: string;
+        date?: { from?: string; to?: string };
+      }
+    >;
   }
 
   // Extend Validator service
-  interface Validator {
+  interface ValidatorExtensions {
     validateWithAI(resource: any): Promise<ValidationResult>;
     validateBusinessRules(resource: any, rules: string[]): Promise<ValidationResult>;
   }
 
   // Extend Terminology service
-  interface Terminology {
+  interface TerminologyExtensions {
     lookupSNOMED(code: string): Promise<SNOMEDConcept>;
     translateCode(opts: TranslateOpts): Promise<Translation>;
   }
 
   // Extend Repository service
-  interface ResourceRepository {
+  interface ResourceRepositoryExtensions {
     bulkImport<T>(resources: T[]): Promise<BulkResult>;
     export<T>(opts: ExportOpts): AsyncIterable<T>;
   }
 
+  // Register additional services
+  interface AtomicServicesExtensions {
+    analytics: AnalyticsService;
+  }
+
   // Extend Context
-  interface AtomicContext {
+  interface AtomicContextExtensions {
     tenant: { id: string; name: string };
     user?: { id: string; role: string };
     requestId: string;
@@ -85,6 +97,12 @@ interface Translation {
   equivalence: string;
 }
 
+interface AnalyticsService extends AtomicService {
+  dependencies: string[];
+  capabilities: string[];
+  track(event: string, payload?: Record<string, unknown>): Promise<void>;
+}
+
 interface BulkResult {
   total: number;
   succeeded: number;
@@ -103,7 +121,7 @@ interface ExportOpts {
 // services/MyValidator.ts
 import { Validator, ValidationResult } from '@atomic-ehr/core';
 
-export class MyValidator implements Validator {
+export class MyValidator implements Validator<FhirR4Schema> {
   dependencies = [];
   capabilities = ['validate'];
 
@@ -150,7 +168,7 @@ export class MyValidator implements Validator {
 // services/MyTerminology.ts
 import { Terminology } from '@atomic-ehr/core';
 
-export class MyTerminology implements Terminology {
+export class MyTerminology implements Terminology<FhirR4Schema> {
   dependencies = [];
   capabilities = ['terminology'];
 
@@ -186,6 +204,21 @@ export class MyTerminology implements Terminology {
     };
   }
 }
+
+```typescript
+// services/MyAnalyticsService.ts
+export class MyAnalyticsService implements AnalyticsService {
+  dependencies = [];
+  capabilities = ['analytics'];
+
+  async init() {}
+  async destroy() {}
+
+  async track(event: string, payload?: Record<string, unknown>) {
+    console.log('analytics event', event, payload);
+  }
+}
+```
 ```
 
 ## Step 3: Initialize System with Extensions
@@ -195,12 +228,14 @@ export class MyTerminology implements Terminology {
 import { AtomicSystem } from '@atomic-ehr/core';
 import { MyValidator } from './services/MyValidator';
 import { MyTerminology } from './services/MyTerminology';
+import { MyAnalyticsService } from './services/MyAnalyticsService';
 // ... other imports
 
-const context = await AtomicSystem({
+const context = await AtomicSystem<FhirR4Schema>({
   validator: new MyValidator(),
   terminology: new MyTerminology(),
   repository: new MyRepository(),
+  analytics: new MyAnalyticsService(),
   // ... other services
 
   // ✅ Custom context properties (from declaration merging)
@@ -223,10 +258,23 @@ const patient = await context.repository.create({
 const aiValidation = await context.validator.validateWithAI(patient);
 const snomedConcept = await context.terminology.lookupSNOMED("386661006");
 const bulkResult = await context.repository.bulkImport([patient]);
+await context.analytics.track('patients.imported', { count: 1 });
 
 // ✅ Access custom context properties
 console.log(context.tenant.name); // ✅ Typed!
 console.log(context.user?.role); // ✅ Typed!
+```
+
+## Step 4: Package Extensions as Plugins
+
+```typescript
+// plugins/analytics.ts
+import { createAtomicPlugin } from '@atomic-ehr/core';
+
+export const analyticsPlugin = createAtomicPlugin(async (context) => {
+  await context.analytics.track('analytics-plugin:loaded');
+  return context;
+});
 ```
 
 ## Key Benefits
@@ -250,26 +298,27 @@ Then in your `types/atomic.d.ts`:
 
 ```typescript
 import type { R4 } from '@types/fhir';
+import type { DefineResource, FhirR4ResourceMap } from '@atomic-ehr/core';
 
 declare module '@atomic-ehr/core' {
-  interface CustomSchema {
-    Patient: {
-      resource: R4.IPatient;
-      searchParams: {
+  interface ResourceSchema extends FhirR4ResourceMap {
+    Patient: DefineResource<
+      R4.IPatient,
+      {
         name?: string;
         birthdate?: string;
         // ... other FHIR search parameters
-      };
-    };
+      }
+    >;
 
-    Observation: {
-      resource: R4.IObservation;
-      searchParams: {
+    Observation: DefineResource<
+      R4.IObservation,
+      {
         patient?: string;
         code?: string;
         // ...
-      };
-    };
+      }
+    >;
   }
 }
 ```
@@ -281,7 +330,7 @@ Now you get full FHIR R4 type safety with autocomplete for all fields!
 ```typescript
 // types/atomic.d.ts
 declare module '@atomic-ehr/core' {
-  interface AtomicContext {
+  interface AtomicContextExtensions {
     tenant: {
       id: string;
       name: string;

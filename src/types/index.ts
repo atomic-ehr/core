@@ -3,8 +3,9 @@
  * Provides all type utilities and schema definitions
  */
 
-// Core schema types
-export * from "./schema.js";
-
 // Helper utilities
 export * from "./helpers.js";
+// Preset schemas
+export * from "./presets/fhir-r4.js";
+// Core schema types
+export * from "./schema.js";

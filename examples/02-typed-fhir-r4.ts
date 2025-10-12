@@ -21,368 +21,313 @@
 // In a real project, this would be in a separate types/fhir.d.ts file
 
 declare module "@atomic-ehr/core" {
-	// ===== DEFINE RESOURCE SCHEMA =====
-	// This gives you autocomplete for resourceType and typed resources
-	interface CustomSchema {
-		Patient: {
-			resource: {
-				resourceType: "Patient";
-				id?: string;
-				name?: Array<{
-					family?: string;
-					given?: string[];
-				}>;
-				gender?: "male" | "female" | "other" | "unknown";
-				birthDate?: string;
-				telecom?: Array<{
-					system?: string;
-					value?: string;
-				}>;
-			};
-			searchParams: {
-				name?: string;
-				family?: string;
-				given?: string;
-				birthdate?: string;
-				gender?: "male" | "female" | "other" | "unknown";
-				_id?: string;
-			};
-		};
+  // ===== INCLUDE BUILT-IN FHIR R4 RESOURCES =====
+  interface ResourceSchema extends FhirR4ResourceMap {}
 
-		Observation: {
-			resource: {
-				resourceType: "Observation";
-				id?: string;
-				status: "registered" | "preliminary" | "final" | "amended";
-				code: {
-					coding?: Array<{
-						system?: string;
-						code?: string;
-						display?: string;
-					}>;
-				};
-				subject?: {
-					reference?: string;
-				};
-				valueQuantity?: {
-					value?: number;
-					unit?: string;
-					system?: string;
-					code?: string;
-				};
-			};
-			searchParams: {
-				patient?: string;
-				code?: string;
-				date?: string;
-				status?: string;
-			};
-		};
-	}
+  // ===== EXTEND VALIDATOR SERVICE =====
+  interface ValidatorExtensions {
+    // Add AI-powered validation
+    validateWithAI(resource: any): Promise<ValidationResult>;
 
-	// ===== EXTEND VALIDATOR SERVICE =====
-	interface Validator {
-		// Add AI-powered validation
-		validateWithAI(resource: any): Promise<ValidationResult>;
+    // Add business rule validation
+    validateBusinessRules(
+      resource: any,
+      rules: string[],
+    ): Promise<ValidationResult>;
+  }
 
-		// Add business rule validation
-		validateBusinessRules(
-			resource: any,
-			rules: string[],
-		): Promise<ValidationResult>;
-	}
+  // ===== EXTEND TERMINOLOGY SERVICE =====
+  interface TerminologyExtensions {
+    // Add SNOMED lookup
+    lookupSNOMED(code: string): Promise<{
+      code: string;
+      display: string;
+      fsn: string;
+    }>;
 
-	// ===== EXTEND TERMINOLOGY SERVICE =====
-	interface Terminology {
-		// Add SNOMED lookup
-		lookupSNOMED(code: string): Promise<{
-			code: string;
-			display: string;
-			fsn: string;
-		}>;
+    // Add code translation
+    translateCode(opts: {
+      code: string;
+      sourceSystem: string;
+      targetSystem: string;
+    }): Promise<{
+      sourceCode: string;
+      targetCode: string;
+      equivalence: string;
+    }>;
+  }
 
-		// Add code translation
-		translateCode(opts: {
-			code: string;
-			sourceSystem: string;
-			targetSystem: string;
-		}): Promise<{
-			sourceCode: string;
-			targetCode: string;
-			equivalence: string;
-		}>;
-	}
+  // ===== EXTEND REPOSITORY SERVICE =====
+  interface ResourceRepositoryExtensions {
+    // Add bulk import
+    bulkImport<T>(resources: T[]): Promise<{
+      total: number;
+      succeeded: number;
+      failed: number;
+    }>;
+  }
 
-	// ===== EXTEND REPOSITORY SERVICE =====
-	interface ResourceRepository {
-		// Add bulk import
-		bulkImport<T>(
-			resources: T[],
-		): Promise<{
-			total: number;
-			succeeded: number;
-			failed: number;
-		}>;
-	}
+  // ===== EXTEND CONTEXT =====
+  interface AtomicContextExtensions {
+    // Multi-tenancy
+    tenant: {
+      id: string;
+      name: string;
+    };
 
-	// ===== EXTEND CONTEXT =====
-	interface AtomicContext {
-		// Multi-tenancy
-		tenant: {
-			id: string;
-			name: string;
-		};
+    // Request ID for tracing
+    requestId: string;
 
-		// Request ID for tracing
-		requestId: string;
-
-		// User context
-		user?: {
-			id: string;
-			role: string;
-			permissions: string[];
-		};
-	}
+    // User context
+    user?: {
+      id: string;
+      role: string;
+      permissions: string[];
+    };
+  }
 }
 
 // Now implement the extended services
 import {
-	AtomicSystem,
-	type Validator,
-	type Terminology,
-	type ResourceRepository,
-	type FHIRPathEvaluator,
-	type CanonicalManager,
-	type Audit,
-	type Logger,
-	type ValidationResult,
+  type AtomicContext,
+  AtomicSystem,
+  type Audit,
+  type CanonicalManager,
+  type FHIRPathEvaluator,
+  type FhirR4ResourceMap,
+  type FhirR4Schema,
+  type Logger,
+  type ResourceRepository,
+  type Terminology,
+  type ValidationResult,
+  type Validator,
 } from "../src/index.js";
 
 // Extended Validator implementation
-class MyValidator implements Validator {
-	dependencies = [];
-	capabilities = ["validate"];
+class MyValidator implements Validator<FhirR4Schema> {
+  dependencies = [];
+  capabilities = ["validate"];
 
-	async init() {
-		console.log("✅ Enhanced Validator initialized");
-	}
+  async init() {
+    console.log("✅ Enhanced Validator initialized");
+  }
 
-	async destroy() {}
+  async destroy() {}
 
-	// Core methods (required)
-	validate() {
-		return { valid: true, errors: [] };
-	}
+  // Core methods (required)
+  validate() {
+    return { valid: true, errors: [] };
+  }
 
-	validateResource() {
-		return { valid: true, errors: [] };
-	}
+  validateResource() {
+    return { valid: true, errors: [] };
+  }
 
-	// Extended methods (custom)
-	async validateWithAI(resource: any): Promise<ValidationResult> {
-		console.log("🤖 Running AI validation...");
-		// Mock AI validation
-		return {
-			valid: true,
-			errors: [],
-		};
-	}
+  // Extended methods (custom)
+  async validateWithAI(resource: any): Promise<ValidationResult> {
+    console.log("🤖 Running AI validation...");
+    // Mock AI validation
+    return {
+      valid: true,
+      errors: [],
+    };
+  }
 
-	async validateBusinessRules(
-		resource: any,
-		rules: string[],
-	): Promise<ValidationResult> {
-		console.log(`📋 Validating ${rules.length} business rules...`);
-		// Mock business rules
-		return {
-			valid: true,
-			errors: [],
-		};
-	}
+  async validateBusinessRules(
+    resource: any,
+    rules: string[],
+  ): Promise<ValidationResult> {
+    console.log(`📋 Validating ${rules.length} business rules...`);
+    // Mock business rules
+    return {
+      valid: true,
+      errors: [],
+    };
+  }
 }
 
 // Extended Terminology implementation
-class MyTerminology implements Terminology {
-	dependencies = [];
-	capabilities = ["terminology"];
+class MyTerminology implements Terminology<FhirR4Schema> {
+  dependencies = [];
+  capabilities = ["terminology"];
 
-	async init() {
-		console.log("✅ Enhanced Terminology initialized");
-	}
+  async init() {
+    console.log("✅ Enhanced Terminology initialized");
+  }
 
-	async destroy() {}
+  async destroy() {}
 
-	// Core methods
-	async lookup() {
-		return { code: "test", display: "Test" };
-	}
+  // Core methods
+  async lookup() {
+    return { code: "test", display: "Test" };
+  }
 
-	async expand() {
-		return { contains: [] };
-	}
+  async expand() {
+    return { contains: [] };
+  }
 
-	async validateCode() {
-		return { result: true };
-	}
+  async validateCode() {
+    return { result: true };
+  }
 
-	// Extended methods (custom)
-	async lookupSNOMED(code: string) {
-		console.log(`🔍 Looking up SNOMED code: ${code}`);
-		return {
-			code: code,
-			display: "Fever",
-			fsn: "Fever (finding)",
-		};
-	}
+  // Extended methods (custom)
+  async lookupSNOMED(code: string) {
+    console.log(`🔍 Looking up SNOMED code: ${code}`);
+    return {
+      code: code,
+      display: "Fever",
+      fsn: "Fever (finding)",
+    };
+  }
 
-	async translateCode(opts: {
-		code: string;
-		sourceSystem: string;
-		targetSystem: string;
-	}) {
-		console.log(
-			`🔄 Translating ${opts.code} from ${opts.sourceSystem} to ${opts.targetSystem}`,
-		);
-		return {
-			sourceCode: opts.code,
-			targetCode: "8310-5",
-			equivalence: "equivalent",
-		};
-	}
+  async translateCode(opts: {
+    code: string;
+    sourceSystem: string;
+    targetSystem: string;
+  }) {
+    console.log(
+      `🔄 Translating ${opts.code} from ${opts.sourceSystem} to ${opts.targetSystem}`,
+    );
+    return {
+      sourceCode: opts.code,
+      targetCode: "8310-5",
+      equivalence: "equivalent",
+    };
+  }
 }
 
 // Extended Repository implementation
-class MyRepository implements ResourceRepository {
-	dependencies = [];
-	capabilities = ["repository"];
+class MyRepository implements ResourceRepository<FhirR4Schema> {
+  dependencies = [];
+  capabilities = ["repository"];
 
-	async init() {
-		console.log("✅ Enhanced Repository initialized");
-	}
+  async init() {
+    console.log("✅ Enhanced Repository initialized");
+  }
 
-	async destroy() {}
+  async destroy() {}
 
-	// Core methods
-	async create(opts: any) {
-		return { id: "123", ...opts.resource };
-	}
+  // Core methods
+  async create(opts: any) {
+    return { id: "123", ...opts.resource };
+  }
 
-	async read() {
-		return { id: "123" };
-	}
+  async read() {
+    return { id: "123" };
+  }
 
-	async update(opts: any) {
-		return opts.resource;
-	}
+  async update(opts: any) {
+    return opts.resource;
+  }
 
-	async delete() {}
+  async delete() {}
 
-	async search() {
-		return [];
-	}
+  async search() {
+    return [];
+  }
 
-	async patch(opts: any) {
-		return opts.patch;
-	}
+  async patch(opts: any) {
+    return opts.patch;
+  }
 
-	async history() {
-		return [];
-	}
+  async history() {
+    return [];
+  }
 
-	async typeHistory() {
-		return [];
-	}
+  async typeHistory() {
+    return [];
+  }
 
-	async resolve() {
-		return { id: "123" };
-	}
+  async resolve() {
+    return { id: "123" };
+  }
 
-	async bulkResolve() {
-		return [];
-	}
+  async bulkResolve() {
+    return [];
+  }
 
-	// Extended method (custom)
-	async bulkImport<T>(resources: T[]) {
-		console.log(`📦 Bulk importing ${resources.length} resources...`);
-		return {
-			total: resources.length,
-			succeeded: resources.length,
-			failed: 0,
-		};
-	}
+  // Extended method (custom)
+  async bulkImport<T>(resources: T[]) {
+    console.log(`📦 Bulk importing ${resources.length} resources...`);
+    return {
+      total: resources.length,
+      succeeded: resources.length,
+      failed: 0,
+    };
+  }
 }
 
 // Simple implementations for other services
-class SimpleFHIRPath implements FHIRPathEvaluator {
-	dependencies = [];
-	capabilities = ["fhirpath"];
-	async init() {}
-	async destroy() {}
-	async evaluate() {
-		return [];
-	}
-	async compile(opts: any) {
-		return { expression: opts.expression, compiled: {} };
-	}
-	async analyze(opts: any) {
-		return { expression: opts.expression, valid: true };
-	}
+class SimpleFHIRPath implements FHIRPathEvaluator<FhirR4Schema> {
+  dependencies = [];
+  capabilities = ["fhirpath"];
+  async init() {}
+  async destroy() {}
+  async evaluate() {
+    return [];
+  }
+  async compile(opts: any) {
+    return { expression: opts.expression, compiled: {} };
+  }
+  async analyze(opts: any) {
+    return { expression: opts.expression, valid: true };
+  }
 }
 
-class SimpleCanonicalManager implements CanonicalManager {
-	dependencies = [];
-	capabilities = ["canonicals"];
-	async init() {}
-	async destroy() {}
-	async resolve() {
-		return { url: "http://example.com", version: "1.0.0" };
-	}
-	async search() {
-		return [];
-	}
+class SimpleCanonicalManager implements CanonicalManager<FhirR4Schema> {
+  dependencies = [];
+  capabilities = ["canonicals"];
+  async init() {}
+  async destroy() {}
+  async resolve() {
+    return { url: "http://example.com", version: "1.0.0" };
+  }
+  async search() {
+    return [];
+  }
 }
 
-class SimpleAudit implements Audit {
-	dependencies = [];
-	capabilities = ["audit"];
-	async init() {}
-	async destroy() {}
-	async audit() {}
+class SimpleAudit implements Audit<FhirR4Schema> {
+  dependencies = [];
+  capabilities = ["audit"];
+  async init() {}
+  async destroy() {}
+  async audit() {}
 }
 
 class SimpleLogger implements Logger {
-	dependencies = [];
-	capabilities = ["logger"];
-	async init() {}
-	async destroy() {}
-	async log(opts: any) {
-		console.log(`[${opts.level}] ${opts.message}`);
-	}
+  dependencies = [];
+  capabilities = ["logger"];
+  async init() {}
+  async destroy() {}
+  async log(opts: any) {
+    console.log(`[${opts.level}] ${opts.message}`);
+  }
 }
 
 // Initialize the system with extended services and custom context
 console.log("🚀 Initializing type-safe FHIR R4 server...\n");
 
-const context = await AtomicSystem({
-	validator: new MyValidator(),
-	repository: new MyRepository(),
-	terminology: new MyTerminology(),
-	fhirpath: new SimpleFHIRPath(),
-	canonicals: new SimpleCanonicalManager(),
-	audit: new SimpleAudit(),
-	logger: new SimpleLogger(),
+const context: AtomicContext<FhirR4Schema> = await AtomicSystem<FhirR4Schema>({
+  validator: new MyValidator(),
+  repository: new MyRepository(),
+  terminology: new MyTerminology(),
+  fhirpath: new SimpleFHIRPath(),
+  canonicals: new SimpleCanonicalManager(),
+  audit: new SimpleAudit(),
+  logger: new SimpleLogger(),
 
-	// ✅ Custom context properties (from declaration merging)
-	tenant: {
-		id: "tenant-1",
-		name: "Hospital A",
-	},
-	requestId: "req-123",
-	user: {
-		id: "user-1",
-		role: "practitioner",
-		permissions: ["read:Patient", "write:Patient"],
-	},
+  // ✅ Custom context properties (from declaration merging)
+  tenant: {
+    id: "tenant-1",
+    name: "Hospital A",
+  },
+  requestId: "req-123",
+  user: {
+    id: "user-1",
+    role: "practitioner",
+    permissions: ["read:Patient", "write:Patient"],
+  },
 });
 
 console.log("\n✅ System initialized with extensions!");
@@ -399,14 +344,14 @@ console.log("\n📝 Creating a Patient resource...");
 // - resourceType: "Patient" | "Observation"
 // - resource fields based on Patient schema
 const patient = await context.repository.create({
-	resourceType: "Patient", // ✅ Autocomplete!
-	resource: {
-		resourceType: "Patient",
-		name: [{ family: "Doe", given: ["John"] }],
-		gender: "male", // ✅ Autocomplete: "male" | "female" | "other" | "unknown"
-		birthDate: "1990-01-01",
-		telecom: [{ system: "email", value: "john@example.com" }],
-	},
+  resourceType: "Patient", // ✅ Autocomplete!
+  resource: {
+    resourceType: "Patient",
+    name: [{ family: "Doe", given: ["John"] }],
+    gender: "male", // ✅ Autocomplete: "male" | "female" | "other" | "unknown"
+    birthDate: "1990-01-01",
+    telecom: [{ system: "email", value: "john@example.com" }],
+  },
 });
 
 console.log("✅ Created patient:", patient.id);
@@ -421,9 +366,9 @@ console.log("AI validation:", aiValidation.valid ? "PASS" : "FAIL");
 
 // ✅ Custom business rules validation
 const rulesValidation = await context.validator.validateBusinessRules(patient, [
-	"has-family-name",
-	"has-birthdate",
-	"adult-has-contact",
+  "has-family-name",
+  "has-birthdate",
+  "adult-has-contact",
 ]);
 console.log("Business rules:", rulesValidation.valid ? "PASS" : "FAIL");
 
@@ -435,9 +380,9 @@ console.log("SNOMED concept:", snomedConcept.display);
 
 // ✅ Custom code translation
 const translation = await context.terminology.translateCode({
-	code: "386661006",
-	sourceSystem: "http://snomed.info/sct",
-	targetSystem: "http://loinc.org",
+  code: "386661006",
+  sourceSystem: "http://snomed.info/sct",
+  targetSystem: "http://loinc.org",
 });
 console.log("Translated to:", translation.targetCode);
 
@@ -445,7 +390,9 @@ console.log("\n🔧 Using extended repository methods...");
 
 // ✅ Custom bulk import
 const bulkResult = await context.repository.bulkImport([patient]);
-console.log(`Bulk import: ${bulkResult.succeeded}/${bulkResult.total} succeeded`);
+console.log(
+  `Bulk import: ${bulkResult.succeeded}/${bulkResult.total} succeeded`,
+);
 
 console.log("\n🎉 Type-safe FHIR R4 server demonstration complete!");
 console.log("\n💡 Key features demonstrated:");

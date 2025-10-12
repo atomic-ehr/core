@@ -26,7 +26,5 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false
   },
-  "exclude": [
-    "examples/02-typed-fhir-r4.ts"
-  ]
+  "exclude": ["examples/02-typed-fhir-r4.ts"]
 }

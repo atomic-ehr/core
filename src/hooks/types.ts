@@ -4,7 +4,7 @@
  */
 
 // Re-export existing context interfaces for compatibility
-export type { AtomicContext } from '../index.js';
+export type { AtomicContext } from "../index.js";
 
 /**
  * Base context interface that all contexts extend
@@ -72,22 +72,22 @@ export interface ErrorContext extends RequestContext {
  * Hook phases - when hooks execute in the request lifecycle
  */
 export type HookPhase =
-  | 'onBootstrap'      // Server startup
-  | 'onConfigResolved' // After configuration is resolved
-  | 'onRegister'       // Service registration
-  | 'onRouteRegister'  // Route registration
-  | 'preRequest'       // Before request processing
-  | 'preValidation'    // Before validation
-  | 'preHandler'       // Before business logic
-  | 'preResponse'      // Before response
-  | 'onResponse'       // After successful response
-  | 'onError'          // Error handling
-  | 'onShutdown';      // Server shutdown
+  | "onBootstrap" // Server startup
+  | "onConfigResolved" // After configuration is resolved
+  | "onRegister" // Service registration
+  | "onRouteRegister" // Route registration
+  | "preRequest" // Before request processing
+  | "preValidation" // Before validation
+  | "preHandler" // Before business logic
+  | "preResponse" // Before response
+  | "onResponse" // After successful response
+  | "onError" // Error handling
+  | "onShutdown"; // Server shutdown
 
 /**
  * Issue severity levels for diagnostics
  */
-export type IssueSeverity = 'info' | 'warn' | 'error' | 'debug';
+export type IssueSeverity = "info" | "warn" | "error" | "debug";
 
 /**
  * Diagnostic information for debugging and observability
@@ -114,7 +114,7 @@ export interface NextFunction {
  */
 export type HookHandler<TContext = any, TResult = any> = (
   context: TContext,
-  next: NextFunction
+  next: NextFunction,
 ) => Promise<TResult>;
 
 /**
@@ -124,7 +124,7 @@ export interface HookDefinition<TContext = any, TResult = any> {
   name: string;
   phase: HookPhase;
   priority: number; // Higher = earlier execution
-  resources?: string | string[] | '*'; // Resource type filter
+  resources?: string | string[] | "*"; // Resource type filter
   profiles?: string[]; // Profile-specific hooks
   handler: HookHandler<TContext, TResult>;
   deps?: string[]; // Dependency hooks that must run first
@@ -219,9 +219,12 @@ export interface HookExecutionState {
  * Validation error for hook validation
  */
 export class HookValidationError extends Error {
-  constructor(message: string, public hookName?: string) {
+  constructor(
+    message: string,
+    public hookName?: string,
+  ) {
     super(message);
-    this.name = 'HookValidationError';
+    this.name = "HookValidationError";
   }
 }
 
@@ -230,7 +233,7 @@ export class HookValidationError extends Error {
  */
 export class CircularDependencyError extends Error {
   constructor(cycle: string[]) {
-    super(`Circular dependency detected: ${cycle.join(' -> ')}`);
-    this.name = 'CircularDependencyError';
+    super(`Circular dependency detected: ${cycle.join(" -> ")}`);
+    this.name = "CircularDependencyError";
   }
 }

@@ -3,7 +3,8 @@
  * Provides convenient type constructors for defining schemas
  */
 
-import type { ResourceSchema, DefaultSchema } from "./schema.js";
+import type { ResourceRepository } from "../index.js";
+import type { DefaultSchema, ResourceSchema } from "./schema.js";
 
 /**
  * Helper to define a resource schema entry
@@ -18,15 +19,15 @@ import type { ResourceSchema, DefaultSchema } from "./schema.js";
  * ```
  */
 export type DefineResource<
-	TResource,
-	TSearchParams = Record<string, any>,
-	TCreate = TResource,
-	TUpdate = Partial<TResource>,
+  TResource,
+  TSearchParams = Record<string, any>,
+  TCreate = TResource,
+  TUpdate = Partial<TResource>,
 > = {
-	resource: TResource;
-	searchParams: TSearchParams;
-	createParams: TCreate;
-	updateParams: TUpdate;
+  resource: TResource;
+  searchParams: TSearchParams;
+  createParams: TCreate;
+  updateParams: TUpdate;
 };
 
 /**
@@ -42,9 +43,7 @@ export type DefineResource<
  * ```
  */
 export type DefineSchema<T extends Record<string, any>> = {
-	[K in keyof T]: T[K] extends { resource: any }
-		? T[K]
-		: DefineResource<T[K]>;
+  [K in keyof T]: T[K] extends { resource: any } ? T[K] : DefineResource<T[K]>;
 };
 
 /**
@@ -52,7 +51,7 @@ export type DefineSchema<T extends Record<string, any>> = {
  * Useful for type inference in generic functions
  */
 export type InferSchema<T> = T extends {
-	repository: { create: (opts: any) => any };
+  repository: ResourceRepository<infer Schema>;
 }
-	? any
-	: DefaultSchema;
+  ? Schema
+  : DefaultSchema;

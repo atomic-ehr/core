@@ -19,10 +19,9 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit",
-    "build": "bun run build:clean && bun run build:types",
-    "build:clean": "rm -rf dist",
-    "build:types": "bunx tsc -p tsconfig.build.json",
-    "prepublishOnly": "bun run build"
+    "build": "tsup",
+    "prepublishOnly": "bun run build",
+    "check": "biome check --write"
   },
   "repository": {
     "type": "git",
@@ -41,9 +40,13 @@
   },
   "homepage": "https://github.com/atomic-ehr/core#readme",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "tsup": "^8.5.0"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@biomejs/biome": "^2.2.5"
   }
 }

@@ -5,11 +5,11 @@
 
 import type {
   HookDefinition,
-  HookPhase,
   HookFilters,
-  HookRegistry as IHookRegistry
-} from './types.js';
-import { CircularDependencyError, HookValidationError } from './types.js';
+  HookPhase,
+  HookRegistry as IHookRegistry,
+} from "./types.js";
+import { CircularDependencyError, HookValidationError } from "./types.js";
 
 /**
  * Implementation of the hook registry
@@ -23,12 +23,20 @@ export class HookRegistry implements IHookRegistry {
   constructor() {
     // Initialize phase maps
     const phases: HookPhase[] = [
-      'onBootstrap', 'onConfigResolved', 'onRegister', 'onRouteRegister',
-      'preRequest', 'preValidation', 'preHandler', 'preResponse',
-      'onResponse', 'onError', 'onShutdown'
+      "onBootstrap",
+      "onConfigResolved",
+      "onRegister",
+      "onRouteRegister",
+      "preRequest",
+      "preValidation",
+      "preHandler",
+      "preResponse",
+      "onResponse",
+      "onError",
+      "onShutdown",
     ];
 
-    phases.forEach(phase => {
+    phases.forEach((phase) => {
       this.hooksByPhase.set(phase, []);
     });
   }
@@ -41,7 +49,9 @@ export class HookRegistry implements IHookRegistry {
 
     // Check for name conflicts
     if (this.hooks.has(hook.name)) {
-      throw new HookValidationError(`Hook with name '${hook.name}' already exists`);
+      throw new HookValidationError(
+        `Hook with name '${hook.name}' already exists`,
+      );
     }
 
     // Store the hook
@@ -76,7 +86,7 @@ export class HookRegistry implements IHookRegistry {
 
     // Remove from phase storage
     const phaseHooks = this.hooksByPhase.get(hook.phase) || [];
-    const index = phaseHooks.findIndex(h => h.name === hookName);
+    const index = phaseHooks.findIndex((h) => h.name === hookName);
     if (index >= 0) {
       phaseHooks.splice(index, 1);
     }
@@ -106,7 +116,7 @@ export class HookRegistry implements IHookRegistry {
       return [...phaseHooks]; // Return copy
     }
 
-    return phaseHooks.filter(hook => this.hookMatchesFilters(hook, filters));
+    return phaseHooks.filter((hook) => this.hookMatchesFilters(hook, filters));
   }
 
   /**
@@ -114,7 +124,7 @@ export class HookRegistry implements IHookRegistry {
    */
   async executePhase<T>(phase: HookPhase, context: T): Promise<T> {
     // This is a placeholder - actual implementation will be in HookExecutor
-    throw new Error('executePhase should be implemented by HookExecutor');
+    throw new Error("executePhase should be implemented by HookExecutor");
   }
 
   /**
@@ -158,32 +168,46 @@ export class HookRegistry implements IHookRegistry {
    * Validate a hook definition
    */
   private validateHook(hook: HookDefinition): void {
-    if (!hook.name || typeof hook.name !== 'string') {
-      throw new HookValidationError('Hook name is required and must be a string');
+    if (!hook.name || typeof hook.name !== "string") {
+      throw new HookValidationError(
+        "Hook name is required and must be a string",
+      );
     }
 
     if (!hook.phase) {
       throw new HookValidationError(`Hook '${hook.name}' must specify a phase`);
     }
 
-    if (typeof hook.priority !== 'number') {
-      throw new HookValidationError(`Hook '${hook.name}' priority must be a number`);
+    if (typeof hook.priority !== "number") {
+      throw new HookValidationError(
+        `Hook '${hook.name}' priority must be a number`,
+      );
     }
 
-    if (typeof hook.handler !== 'function') {
-      throw new HookValidationError(`Hook '${hook.name}' handler must be a function`);
+    if (typeof hook.handler !== "function") {
+      throw new HookValidationError(
+        `Hook '${hook.name}' handler must be a function`,
+      );
     }
 
     // Validate phase
     const validPhases: HookPhase[] = [
-      'onBootstrap', 'onConfigResolved', 'onRegister', 'onRouteRegister',
-      'preRequest', 'preValidation', 'preHandler', 'preResponse',
-      'onResponse', 'onError', 'onShutdown'
+      "onBootstrap",
+      "onConfigResolved",
+      "onRegister",
+      "onRouteRegister",
+      "preRequest",
+      "preValidation",
+      "preHandler",
+      "preResponse",
+      "onResponse",
+      "onError",
+      "onShutdown",
     ];
 
     if (!validPhases.includes(hook.phase)) {
       throw new HookValidationError(
-        `Hook '${hook.name}' has invalid phase '${hook.phase}'. Valid phases: ${validPhases.join(', ')}`
+        `Hook '${hook.name}' has invalid phase '${hook.phase}'. Valid phases: ${validPhases.join(", ")}`,
       );
     }
 
@@ -192,7 +216,7 @@ export class HookRegistry implements IHookRegistry {
       for (const dep of hook.deps) {
         if (!this.hooks.has(dep)) {
           throw new HookValidationError(
-            `Hook '${hook.name}' depends on '${dep}' which is not registered`
+            `Hook '${hook.name}' depends on '${dep}' which is not registered`,
           );
         }
       }
@@ -200,23 +224,29 @@ export class HookRegistry implements IHookRegistry {
 
     // Validate resource filters
     if (hook.resources) {
-      if (typeof hook.resources === 'string') {
-        if (hook.resources !== '*' && !/^[A-Z][a-zA-Z]*$/.test(hook.resources)) {
+      if (typeof hook.resources === "string") {
+        if (
+          hook.resources !== "*" &&
+          !/^[A-Z][a-zA-Z]*$/.test(hook.resources)
+        ) {
           throw new HookValidationError(
-            `Hook '${hook.name}' has invalid resource type '${hook.resources}'`
+            `Hook '${hook.name}' has invalid resource type '${hook.resources}'`,
           );
         }
       } else if (Array.isArray(hook.resources)) {
         for (const resource of hook.resources) {
-          if (typeof resource !== 'string' || (resource !== '*' && !/^[A-Z][a-zA-Z]*$/.test(resource))) {
+          if (
+            typeof resource !== "string" ||
+            (resource !== "*" && !/^[A-Z][a-zA-Z]*$/.test(resource))
+          ) {
             throw new HookValidationError(
-              `Hook '${hook.name}' has invalid resource type '${resource}'`
+              `Hook '${hook.name}' has invalid resource type '${resource}'`,
             );
           }
         }
       } else {
         throw new HookValidationError(
-          `Hook '${hook.name}' resources must be a string, array, or '*'`
+          `Hook '${hook.name}' resources must be a string, array, or '*'`,
         );
       }
     }
@@ -228,7 +258,7 @@ export class HookRegistry implements IHookRegistry {
   private checkCircularDependency(
     hookName: string,
     visited: Set<string>,
-    path: string[]
+    path: string[],
   ): void {
     if (path.includes(hookName)) {
       const cycle = path.slice(path.indexOf(hookName));
@@ -262,7 +292,7 @@ export class HookRegistry implements IHookRegistry {
    * Topological sort with priority consideration
    */
   private topologicalSort(hooks: HookDefinition[]): HookDefinition[] {
-    const hookNames = new Set(hooks.map(h => h.name));
+    const hookNames = new Set(hooks.map((h) => h.name));
     const inDegree = new Map<string, number>();
     const adjacencyList = new Map<string, string[]>();
 
@@ -284,11 +314,11 @@ export class HookRegistry implements IHookRegistry {
 
     // Create priority queue (higher priority first)
     const queue = hooks
-      .filter(hook => inDegree.get(hook.name) === 0)
+      .filter((hook) => inDegree.get(hook.name) === 0)
       .sort((a, b) => b.priority - a.priority);
 
     const result: HookDefinition[] = [];
-    const hookMap = new Map(hooks.map(h => [h.name, h]));
+    const hookMap = new Map(hooks.map((h) => [h.name, h]));
 
     while (queue.length > 0) {
       const current = queue.shift()!;
@@ -319,12 +349,15 @@ export class HookRegistry implements IHookRegistry {
   /**
    * Check if a hook matches the given filters
    */
-  private hookMatchesFilters(hook: HookDefinition, filters: HookFilters): boolean {
+  private hookMatchesFilters(
+    hook: HookDefinition,
+    filters: HookFilters,
+  ): boolean {
     // Resource type filter
     if (filters.resourceType) {
-      if (!hook.resources || hook.resources === '*') {
+      if (!hook.resources || hook.resources === "*") {
         // Hook applies to all resources, so it matches
-      } else if (typeof hook.resources === 'string') {
+      } else if (typeof hook.resources === "string") {
         if (hook.resources !== filters.resourceType) {
           return false;
         }
@@ -340,8 +373,8 @@ export class HookRegistry implements IHookRegistry {
       if (!hook.profiles || hook.profiles.length === 0) {
         // Hook doesn't specify profiles, so it matches
       } else {
-        const hasMatchingProfile = filters.profiles.some(profile =>
-          hook.profiles!.includes(profile)
+        const hasMatchingProfile = filters.profiles.some((profile) =>
+          hook.profiles!.includes(profile),
         );
         if (!hasMatchingProfile) {
           return false;
@@ -354,8 +387,8 @@ export class HookRegistry implements IHookRegistry {
       if (!hook.tags || hook.tags.length === 0) {
         return false; // Hook must have tags to match tag filter
       } else {
-        const hasMatchingTag = filters.tags.some(tag =>
-          hook.tags!.includes(tag)
+        const hasMatchingTag = filters.tags.some((tag) =>
+          hook.tags!.includes(tag),
         );
         if (!hasMatchingTag) {
           return false;
