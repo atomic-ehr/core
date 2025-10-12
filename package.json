@@ -1,6 +1,6 @@
 {
   "name": "@atomic-ehr/core",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Core utilities for Atomic EHR",
   "type": "module",
   "main": "./dist/index.js",
